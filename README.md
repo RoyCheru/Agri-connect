@@ -1,1 +1,3 @@
 GROUP 1 Testing commit structure
+
+A smalll presentation on how to commit. (TBD)
