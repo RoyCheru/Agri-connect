@@ -1,8 +1,9 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
-from app.models import db  
+from app.models import db
+from app.routes import register_routes   # 🔴 CRITICAL ADD
+
 
 def create_app():
     app = Flask(__name__)
@@ -11,7 +12,9 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
-    migrate = Migrate(app, db)
+    Migrate(app, db)
+
+    register_routes(app)   
 
     return app
 
