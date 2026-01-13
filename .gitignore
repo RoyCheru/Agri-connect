@@ -1,1 +1,53 @@
+# ======================
+# Python / Flask
+# ======================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
 venv/
+.env
+.env.*
+pip-wheel-metadata/
+
+# Flask
+instance/
+*.db
+*.sqlite3
+migrations/__pycache__/
+
+# ======================
+# Testing / Coverage
+# ======================
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ======================
+# OS files
+# ======================
+.DS_Store
+Thumbs.db
+
+# ======================
+# IDEs / Editors
+# ======================
+.vscode/
+.idea/
+*.swp
+
+# ======================
+# Node (if frontend exists)
+# ======================
+node_modules/
+dist/
+build/
+
+# ======================
+# Logs
+# ======================
+*.log
+
