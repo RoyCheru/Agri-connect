@@ -2,7 +2,7 @@ from flask import Flask
 from flask_migrate import Migrate
 
 from app.models import db
-from app.routes import register_routes   # 🔴 CRITICAL ADD
+from app.routes import register_routes   
 
 
 def create_app():
