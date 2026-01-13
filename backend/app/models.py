@@ -90,7 +90,6 @@ class Order(db.Model):
         default=datetime.utcnow
     )
 
-    # Relationships
     items = db.relationship(
         "OrderItem",
         backref="order",
