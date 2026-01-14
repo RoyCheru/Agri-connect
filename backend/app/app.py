@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import session
+from flask_cors import CORS
 
 from app.models import (
     db,
@@ -24,6 +25,17 @@ def create_app():
     Migrate(app, db)
 
     app.secret_key = "super-secret-key"  
+    
+    app.config.update(
+    SESSION_COOKIE_SAMESITE="None",
+    SESSION_COOKIE_SECURE=False,
+)
+
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=["http://localhost:3000"]
+    )
 
     @app.post("/user-types")
     def create_user_type():
