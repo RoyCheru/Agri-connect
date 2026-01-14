@@ -1,3 +1,4 @@
+from backend import app
 from flask import Flask, request, jsonify
 from flask_migrate import Migrate
 
@@ -159,4 +160,54 @@ def create_app():
         db.session.commit()
         return "", 204
 
+    @app.post("/user-products")
+    def create_user_product():
+        data = request.get_json()
+        up = UserProduct(**data)
+        db.session.add(up)
+        db.session.commit()
+        return jsonify({"message": "User product created"}), 201
+
+
+    @app.get("/user-products")
+    def get_user_products():
+        ups = UserProduct.query.all()
+        return jsonify([
+            {
+                "user_id": up.user_id,
+                "product_id": up.product_id,
+                "price": str(up.price),
+                "stock_quantity": up.stock_quantity
+            } for up in ups
+        ])
+
+
+    @app.get("/user-products/<int:user_id>/<int:product_id>")
+    def get_user_product(user_id, product_id):
+        up = UserProduct.query.get_or_404((user_id, product_id))
+        return jsonify({
+            "user_id": up.user_id,
+            "product_id": up.product_id,
+            "price": str(up.price),
+            "stock_quantity": up.stock_quantity
+        })
+
+
+    @app.put("/user-products/<int:user_id>/<int:product_id>")
+    def update_user_product(user_id, product_id):
+        up = UserProduct.query.get_or_404((user_id, product_id))
+        data = request.get_json()
+        for key, value in data.items():
+            setattr(up, key, value)
+        db.session.commit()
+        return jsonify({"message": "User product updated"})
+
+
+    @app.delete("/user-products/<int:user_id>/<int:product_id>")
+    def delete_user_product(user_id, product_id):
+        up = UserProduct.query.get_or_404((user_id, product_id))
+        db.session.delete(up)
+        db.session.commit()
+        return "", 204
+    
 app = create_app()
