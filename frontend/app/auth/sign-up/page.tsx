@@ -36,10 +36,10 @@ export default function SignUpPage() {
     }
 
     const result = await signUp({
+      name: fullName,
       email,
       password,
-      fullName,
-      userType,
+      user_type_id: userType === "farmer" ? 1 : 2,
     })
 
     if (result.success) {
