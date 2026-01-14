@@ -110,5 +110,53 @@ def create_app():
         db.session.commit()
         return "", 204
 
+    @app.post("/products")
+    def create_product():
+        data = request.get_json()
+        product = Product(**data)
+        db.session.add(product)
+        db.session.commit()
+        return jsonify({"id": product.id}), 201
+
+
+    @app.get("/products")
+    def get_products():
+        products = Product.query.all()
+        return jsonify([
+        {
+            "id": p.id,
+            "name": p.name,
+            "base_price": str(p.base_price)
+        } for p in products
+    ])
+
+
+    @app.get("/products/<int:id>")
+    def get_product(id):
+        p = Product.query.get_or_404(id)
+        return jsonify({
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "base_price": str(p.base_price)
+        })
+
+
+    @app.put("/products/<int:id>")
+    def update_product(id):
+        p = Product.query.get_or_404(id)
+        data = request.get_json()
+        for key, value in data.items():
+            setattr(p, key, value)
+        db.session.commit()
+        return jsonify({"message": "Product updated"})
+
+
+    @app.delete("/products/<int:id>")
+    def delete_product(id):
+        p = Product.query.get_or_404(id)
+        db.session.delete(p)
+        db.session.commit()
+        return "", 204
 
 app = create_app()
