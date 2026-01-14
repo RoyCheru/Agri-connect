@@ -15,7 +15,7 @@ from app.models import (
 )
 
 def create_app():
-    app = Flask(name)
+    app = Flask(__name__)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///agri_connect.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -192,12 +192,12 @@ def create_app():
     def get_products():
         products = Product.query.all()
         return jsonify([
-        {
-            "id": p.id,
-            "name": p.name,
-            "base_price": str(p.base_price)
-        } for p in products
-    ])
+            {
+                "id": p.id,
+                "name": p.name,
+                "base_price": str(p.base_price)
+            } for p in products
+        ])
 
 
     @app.get("/products/<int:id>")
