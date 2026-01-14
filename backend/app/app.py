@@ -210,4 +210,107 @@ def create_app():
         db.session.commit()
         return "", 204
     
+    
+    @app.post("/orders")
+    def create_order():
+        data = request.get_json()
+        order = Order(**data)
+        db.session.add(order)
+        db.session.commit()
+        return jsonify({"id": order.id}), 201
+
+
+    @app.get("/orders")
+    def get_orders():
+        orders = Order.query.all()
+        return jsonify([
+            {
+                "id": o.id,
+                "user_id": o.user_id,
+                "status": o.status,
+                "total_price": str(o.total_price)
+            } for o in orders
+        ])
+
+
+    @app.get("/orders/<int:id>")
+    def get_order(id):
+        o = Order.query.get_or_404(id)
+        return jsonify({
+            "id": o.id,
+            "user_id": o.user_id,
+            "status": o.status,
+            "total_price": str(o.total_price)
+        })
+
+
+    @app.put("/orders/<int:id>")
+    def update_order(id):
+        o = Order.query.get_or_404(id)
+        data = request.get_json()
+        for key, value in data.items():
+            setattr(o, key, value)
+        db.session.commit()
+        return jsonify({"message": "Order updated"})
+
+
+    @app.delete("/orders/<int:id>")
+    def delete_order(id):
+        o = Order.query.get_or_404(id)
+        db.session.delete(o)
+        db.session.commit()
+        return "", 204
+
+    @app.post("/order-items")
+    def create_order_item():
+        data = request.get_json()
+        item = OrderItem(**data)
+        db.session.add(item)
+        db.session.commit()
+        return jsonify({"message": "Order item created"}), 201
+
+
+    @app.get("/order-items")
+    def get_order_items():
+        items = OrderItem.query.all()
+        return jsonify([
+            {
+                "order_id": i.order_id,
+                "product_id": i.product_id,
+                "quantity": i.quantity,
+                "price": str(i.price)
+            } for i in items
+        ])
+
+
+    @app.get("/order-items/<int:order_id>/<int:product_id>")
+    def get_order_item(order_id, product_id):
+        i = OrderItem.query.get_or_404((order_id, product_id))
+        return jsonify({
+            "order_id": i.order_id,
+            "product_id": i.product_id,
+            "quantity": i.quantity,
+            "price": str(i.price)
+        })
+
+
+    @app.put("/order-items/<int:order_id>/<int:product_id>")
+    def update_order_item(order_id, product_id):
+        i = OrderItem.query.get_or_404((order_id, product_id))
+        data = request.get_json()
+        for key, value in data.items():
+            setattr(i, key, value)
+        db.session.commit()
+        return jsonify({"message": "Order item updated"})
+
+
+    @app.delete("/order-items/<int:order_id>/<int:product_id>")
+    def delete_order_item(order_id, product_id):
+        i = OrderItem.query.get_or_404((order_id, product_id))
+        db.session.delete(i)
+        db.session.commit()
+        return "", 204
+
+    return app
+
 app = create_app()
