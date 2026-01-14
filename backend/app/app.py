@@ -14,9 +14,8 @@ from app.models import (
     OrderItem
 )
 
-
 def create_app():
-    app = Flask(__name__)
+    app = Flask(name)
 
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///agri_connect.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -25,11 +24,11 @@ def create_app():
     Migrate(app, db)
 
     app.secret_key = "super-secret-key"  
-    
+
     app.config.update(
     SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=False,
-)
+    )
 
     CORS(
         app,
@@ -44,7 +43,7 @@ def create_app():
         db.session.add(user_type)
         db.session.commit()
         return jsonify({"id": user_type.id}), 201
-    
+
     @app.get("/user-types")
     def get_user_types():
         types = UserType.query.all()
@@ -96,8 +95,8 @@ def create_app():
             "email": user.email,
             "user_type_id": user.user_type_id
         }), 201
-    
-    
+
+
     @app.post("/login")
     def login():
         data = request.get_json()
@@ -278,8 +277,8 @@ def create_app():
         db.session.delete(up)
         db.session.commit()
         return "", 204
-    
-    
+
+
     @app.post("/orders")
     def create_order():
         data = request.get_json()
@@ -380,6 +379,81 @@ def create_app():
         db.session.commit()
         return "", 204
 
-    return app
+    @app.post("/orders-with-items")
+    def create_order_with_items():
+        user_id = session.get("user_id")
 
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        data = request.get_json()
+        items = data.get("items", [])
+
+        if not items:
+            return jsonify({"error": "No items provided"}), 400
+
+        total_price = 0
+        order_items = []
+
+        try:
+            
+            for item in items:
+                product_id = item["product_id"]
+                quantity = int(item["quantity"])
+
+                user_product = UserProduct.query.filter_by(
+                    product_id=product_id
+                ).first()
+
+                if not user_product:
+                    return jsonify({"error": "Product not available"}), 404
+
+                if user_product.stock_quantity < quantity:
+                    return jsonify({
+                        "error": f"Not enough stock for product {product_id}"
+                    }), 400
+
+                price = float(user_product.price)
+                total_price += price * quantity
+
+                order_items.append({
+                    "product_id": product_id,
+                    "quantity": quantity,
+                    "price": price,
+                    "user_product": user_product
+                })
+
+            order = Order(
+                user_id=user_id,
+                total_price=total_price,
+                status="pending"
+            )
+
+            db.session.add(order)
+            db.session.flush()  
+
+            for item in order_items:
+                db.session.add(OrderItem(
+                    order_id=order.id,
+                    product_id=item["product_id"],
+                    quantity=item["quantity"],
+                    price_at_purchase=item["price"]
+                ))
+
+                item["user_product"].stock_quantity -= item["quantity"]
+
+            db.session.commit()
+
+            return jsonify({
+                "order_id": order.id,
+                "total_price": total_price,
+                "status": order.status
+            }), 201
+
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 500
+
+
+    return app
 app = create_app()
