@@ -9,16 +9,16 @@ import { BuyerDashboard } from "@/components/buyer-dashboard"
 import { useStore } from "@/lib/store-context"
 
 export default function DashboardPage() {
-  const { user } = useStore()
+  const { user, loading } = useStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       router.push("/auth/login")
     }
-  }, [user, router])
+  }, [loading, user, router])
 
-  if (!user) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Loading...</p>
@@ -30,7 +30,11 @@ export default function DashboardPage() {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
-        {user.userType === "farmer" ? <FarmerDashboard /> : <BuyerDashboard />}
+        {user.user_type_id === 1 ? (
+          <FarmerDashboard />
+        ) : (
+          <BuyerDashboard />
+        )}
       </main>
       <Footer />
     </div>

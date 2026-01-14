@@ -1,18 +1,16 @@
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 export async function apiFetch(
   path: string,
   options: RequestInit = {}
 ) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`/api${path}`, {
     ...options,
-    credentials: "include", // REQUIRED for Flask sessions
+    credentials: "include", 
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
-  });
+  })
 
-  return res;
+  return response
 }
