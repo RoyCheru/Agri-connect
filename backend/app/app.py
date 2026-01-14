@@ -60,4 +60,55 @@ def create_app():
         return "", 204
 
 
+    @app.post("/users")
+    def create_user():
+        data = request.get_json()
+        user = User(**data)
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({"id": user.id}), 201
+
+
+    @app.get("/users")
+    def get_users():
+        users = User.query.all()
+        return jsonify([
+            {
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "user_type_id": u.user_type_id
+            } for u in users
+        ])
+
+
+    @app.get("/users/<int:id>")
+    def get_user(id):
+        u = User.query.get_or_404(id)
+        return jsonify({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "user_type_id": u.user_type_id
+        })
+
+
+    @app.put("/users/<int:id>")
+    def update_user(id):
+        u = User.query.get_or_404(id)
+        data = request.get_json()
+        for key, value in data.items():
+            setattr(u, key, value)
+        db.session.commit()
+        return jsonify({"message": "User updated"})
+
+
+    @app.delete("/users/<int:id>")
+    def delete_user(id):
+        u = User.query.get_or_404(id)
+        db.session.delete(u)
+        db.session.commit()
+        return "", 204
+
+
 app = create_app()
