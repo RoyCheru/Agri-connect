@@ -30,7 +30,7 @@ export default function LoginPage() {
     if (result.success) {
       router.push("/dashboard")
     } else {
-      setError(result.error || "An error occurred")
+      setError(result.error || "Invalid email or password")
     }
 
     setIsLoading(false)
@@ -51,40 +51,40 @@ export default function LoginPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl">Welcome Back</CardTitle>
-                <CardDescription>Sign in to your account to continue</CardDescription>
+                <CardDescription>Sign in to your account</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleLogin}>
                   <div className="flex flex-col gap-6">
                     <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
+                      <Label>Email</Label>
                       <Input
-                        id="email"
                         type="email"
-                        placeholder="farmer@example.com"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="password">Password</Label>
+                      <Label>Password</Label>
                       <Input
-                        id="password"
                         type="password"
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                       />
                     </div>
+
                     {error && <p className="text-sm text-destructive">{error}</p>}
+
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
                   </div>
+
                   <div className="mt-4 text-center text-sm">
-                    {"Don't have an account? "}
-                    <Link href="/auth/sign-up" className="text-primary underline underline-offset-4">
+                    Don&apos;t have an account?{" "}
+                    <Link href="/auth/sign-up" className="text-primary underline">
                       Sign up
                     </Link>
                   </div>

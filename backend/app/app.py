@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_migrate import Migrate
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask import session
 
 from app.models import (
     db,
@@ -21,6 +23,7 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
 
+    app.secret_key = "super-secret-key"  
 
     @app.post("/user-types")
     def create_user_type():
@@ -63,10 +66,65 @@ def create_app():
     @app.post("/users")
     def create_user():
         data = request.get_json()
-        user = User(**data)
+
+        hashed_password = generate_password_hash(data["password"])
+
+        user = User(
+            name=data["name"],
+            email=data["email"],
+            password=hashed_password,
+            user_type_id=data["user_type_id"]
+        )
+
         db.session.add(user)
         db.session.commit()
-        return jsonify({"id": user.id}), 201
+
+        return jsonify({
+            "id": user.id,
+            "email": user.email,
+            "user_type_id": user.user_type_id
+        }), 201
+    
+    
+    @app.post("/login")
+    def login():
+        data = request.get_json()
+
+        user = User.query.filter_by(email=data["email"]).first()
+
+        if not user or not check_password_hash(user.password, data["password"]):
+            return jsonify({"error": "Invalid credentials"}), 401
+
+        
+        session["user_id"] = user.id
+
+        return jsonify({
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "user_type_id": user.user_type_id
+        })
+
+    @app.post("/logout")
+    def logout():
+        session.pop("user_id", None)
+        return jsonify({"message": "Logged out"})
+
+    @app.get("/me")
+    def get_current_user():
+        user_id = session.get("user_id")
+
+        if not user_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        user = User.query.get(user_id)
+
+        return jsonify({
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "user_type_id": user.user_type_id
+        })
 
 
     @app.get("/users")
