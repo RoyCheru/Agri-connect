@@ -10,9 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Package, Plus, Inbox } from "lucide-react"
 
-/* =======================
-   TYPES
-======================= */
+
 
 type UserProduct = {
   user_id: number
@@ -42,9 +40,7 @@ type OrderItem = {
   price: string
 }
 
-/* =======================
-   COMPONENT
-======================= */
+
 
 export function FarmerDashboard() {
   const { user } = useStore()
@@ -65,9 +61,7 @@ export function FarmerDashboard() {
     stock: "",
   })
 
-  /* =======================
-     LOAD DATA
-  ======================= */
+ 
 
   const loadData = async () => {
     if (!user) return
@@ -95,9 +89,7 @@ export function FarmerDashboard() {
     loadData()
   }, [user])
 
-  /* =======================
-     CREATE PRODUCT
-  ======================= */
+  
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -140,9 +132,7 @@ export function FarmerDashboard() {
     }
   }
 
-  /* =======================
-     ACCEPT / REJECT
-  ======================= */
+
 
   const handleOrderAction = async (
     orderId: number,
@@ -167,9 +157,7 @@ export function FarmerDashboard() {
     }
   }
 
-  /* =======================
-     DERIVED DATA
-  ======================= */
+  
 
   if (loading) return <p>Loading farmer dashboard...</p>
 
@@ -189,9 +177,7 @@ export function FarmerDashboard() {
 
   const productMap = new Map(products.map((p) => [p.id, p]))
 
-  /* =======================
-     UI
-  ======================= */
+ 
 
   return (
     <div className="space-y-8">
@@ -202,7 +188,8 @@ export function FarmerDashboard() {
         </p>
       </div>
 
-      {/* CREATE PRODUCT */}
+      
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -261,7 +248,7 @@ export function FarmerDashboard() {
         </CardContent>
       </Card>
 
-      {/* MY LISTINGS */}
+
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Package className="h-5 w-5" />
@@ -290,7 +277,6 @@ export function FarmerDashboard() {
         )}
       </div>
 
-      {/* INCOMING ORDERS */}
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Inbox className="h-5 w-5" />
