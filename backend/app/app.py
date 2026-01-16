@@ -1,7 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, session
 from flask_migrate import Migrate
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask import session
+from werkzeug.security import check_password_hash
 from flask_cors import CORS
 
 from app.models import (
@@ -19,94 +18,33 @@ def create_app():
 
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///agri_connect.db"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.secret_key = "super-secret-key"
+
+    app.config.update(
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=False,
+    )
 
     db.init_app(app)
     Migrate(app, db)
 
-    app.secret_key = "super-secret-key"  
-
-    app.config.update(
-    SESSION_COOKIE_SAMESITE="None",
-    SESSION_COOKIE_SECURE=False,
-    )
-
     CORS(
         app,
         supports_credentials=True,
-        origins=["http://localhost:3000"]
+        origins=["http://localhost:3000"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type"]
     )
-
-    @app.post("/user-types")
-    def create_user_type():
-        data = request.get_json()
-        user_type = UserType(**data)
-        db.session.add(user_type)
-        db.session.commit()
-        return jsonify({"id": user_type.id}), 201
-
-    @app.get("/user-types")
-    def get_user_types():
-        types = UserType.query.all()
-        return jsonify([
-            {"id": t.id, "name": t.name} for t in types
-        ])
-
-    @app.get("/user-types/<int:id>")
-    def get_user_type(id):
-        t = UserType.query.get_or_404(id)
-        return jsonify({"id": t.id, "name": t.name})
-
-
-    @app.put("/user-types/<int:id>")
-    def update_user_type(id):
-        t = UserType.query.get_or_404(id)
-        data = request.get_json()
-        t.name = data.get("name", t.name)
-        db.session.commit()
-        return jsonify({"message": "User type updated"})
-
-
-    @app.delete("/user-types/<int:id>")
-    def delete_user_type(id):
-        t = UserType.query.get_or_404(id)
-        db.session.delete(t)
-        db.session.commit()
-        return "", 204
-
-
-    @app.post("/users")
-    def create_user():
-        data = request.get_json()
-
-        hashed_password = generate_password_hash(data["password"])
-
-        user = User(
-            name=data["name"],
-            email=data["email"],
-            password=hashed_password,
-            user_type_id=data["user_type_id"]
-        )
-
-        db.session.add(user)
-        db.session.commit()
-
-        return jsonify({
-            "id": user.id,
-            "email": user.email,
-            "user_type_id": user.user_type_id
-        }), 201
 
 
     @app.post("/login")
     def login():
         data = request.get_json()
-
         user = User.query.filter_by(email=data["email"]).first()
 
         if not user or not check_password_hash(user.password, data["password"]):
             return jsonify({"error": "Invalid credentials"}), 401
 
-        
         session["user_id"] = user.id
 
         return jsonify({
@@ -122,14 +60,12 @@ def create_app():
         return jsonify({"message": "Logged out"})
 
     @app.get("/me")
-    def get_current_user():
+    def me():
         user_id = session.get("user_id")
-
         if not user_id:
             return jsonify({"error": "Not authenticated"}), 401
 
-        user = User.query.get(user_id)
-
+        user = User.query.get_or_404(user_id)
         return jsonify({
             "id": user.id,
             "name": user.name,
@@ -138,47 +74,6 @@ def create_app():
         })
 
 
-    @app.get("/users")
-    def get_users():
-        users = User.query.all()
-        return jsonify([
-            {
-                "id": u.id,
-                "name": u.name,
-                "email": u.email,
-                "user_type_id": u.user_type_id
-            } for u in users
-        ])
-
-
-    @app.get("/users/<int:id>")
-    def get_user(id):
-        u = User.query.get_or_404(id)
-        return jsonify({
-            "id": u.id,
-            "name": u.name,
-            "email": u.email,
-            "user_type_id": u.user_type_id
-        })
-
-
-    @app.put("/users/<int:id>")
-    def update_user(id):
-        u = User.query.get_or_404(id)
-        data = request.get_json()
-        for key, value in data.items():
-            setattr(u, key, value)
-        db.session.commit()
-        return jsonify({"message": "User updated"})
-
-
-    @app.delete("/users/<int:id>")
-    def delete_user(id):
-        u = User.query.get_or_404(id)
-        db.session.delete(u)
-        db.session.commit()
-        return "", 204
-
     @app.post("/products")
     def create_product():
         data = request.get_json()
@@ -186,7 +81,6 @@ def create_app():
         db.session.add(product)
         db.session.commit()
         return jsonify({"id": product.id}), 201
-
 
     @app.get("/products")
     def get_products():
@@ -200,34 +94,6 @@ def create_app():
         ])
 
 
-    @app.get("/products/<int:id>")
-    def get_product(id):
-        p = Product.query.get_or_404(id)
-        return jsonify({
-            "id": p.id,
-            "name": p.name,
-            "description": p.description,
-            "base_price": str(p.base_price)
-        })
-
-
-    @app.put("/products/<int:id>")
-    def update_product(id):
-        p = Product.query.get_or_404(id)
-        data = request.get_json()
-        for key, value in data.items():
-            setattr(p, key, value)
-        db.session.commit()
-        return jsonify({"message": "Product updated"})
-
-
-    @app.delete("/products/<int:id>")
-    def delete_product(id):
-        p = Product.query.get_or_404(id)
-        db.session.delete(p)
-        db.session.commit()
-        return "", 204
-
     @app.post("/user-products")
     def create_user_product():
         data = request.get_json()
@@ -235,7 +101,6 @@ def create_app():
         db.session.add(up)
         db.session.commit()
         return jsonify({"message": "User product created"}), 201
-
 
     @app.get("/user-products")
     def get_user_products():
@@ -248,44 +113,6 @@ def create_app():
                 "stock_quantity": up.stock_quantity
             } for up in ups
         ])
-
-
-    @app.get("/user-products/<int:user_id>/<int:product_id>")
-    def get_user_product(user_id, product_id):
-        up = UserProduct.query.get_or_404((user_id, product_id))
-        return jsonify({
-            "user_id": up.user_id,
-            "product_id": up.product_id,
-            "price": str(up.price),
-            "stock_quantity": up.stock_quantity
-        })
-
-
-    @app.put("/user-products/<int:user_id>/<int:product_id>")
-    def update_user_product(user_id, product_id):
-        up = UserProduct.query.get_or_404((user_id, product_id))
-        data = request.get_json()
-        for key, value in data.items():
-            setattr(up, key, value)
-        db.session.commit()
-        return jsonify({"message": "User product updated"})
-
-
-    @app.delete("/user-products/<int:user_id>/<int:product_id>")
-    def delete_user_product(user_id, product_id):
-        up = UserProduct.query.get_or_404((user_id, product_id))
-        db.session.delete(up)
-        db.session.commit()
-        return "", 204
-
-
-    @app.post("/orders")
-    def create_order():
-        data = request.get_json()
-        order = Order(**data)
-        db.session.add(order)
-        db.session.commit()
-        return jsonify({"id": order.id}), 201
 
 
     @app.get("/orders")
@@ -301,43 +128,6 @@ def create_app():
         ])
 
 
-    @app.get("/orders/<int:id>")
-    def get_order(id):
-        o = Order.query.get_or_404(id)
-        return jsonify({
-            "id": o.id,
-            "user_id": o.user_id,
-            "status": o.status,
-            "total_price": str(o.total_price)
-        })
-
-
-    @app.put("/orders/<int:id>")
-    def update_order(id):
-        o = Order.query.get_or_404(id)
-        data = request.get_json()
-        for key, value in data.items():
-            setattr(o, key, value)
-        db.session.commit()
-        return jsonify({"message": "Order updated"})
-
-
-    @app.delete("/orders/<int:id>")
-    def delete_order(id):
-        o = Order.query.get_or_404(id)
-        db.session.delete(o)
-        db.session.commit()
-        return "", 204
-
-    @app.post("/order-items")
-    def create_order_item():
-        data = request.get_json()
-        item = OrderItem(**data)
-        db.session.add(item)
-        db.session.commit()
-        return jsonify({"message": "Order item created"}), 201
-
-
     @app.get("/order-items")
     def get_order_items():
         items = OrderItem.query.all()
@@ -346,43 +136,14 @@ def create_app():
                 "order_id": i.order_id,
                 "product_id": i.product_id,
                 "quantity": i.quantity,
-                "price": str(i.price)
+                "price": str(i.price_at_purchase)
             } for i in items
         ])
 
 
-    @app.get("/order-items/<int:order_id>/<int:product_id>")
-    def get_order_item(order_id, product_id):
-        i = OrderItem.query.get_or_404((order_id, product_id))
-        return jsonify({
-            "order_id": i.order_id,
-            "product_id": i.product_id,
-            "quantity": i.quantity,
-            "price": str(i.price)
-        })
-
-
-    @app.put("/order-items/<int:order_id>/<int:product_id>")
-    def update_order_item(order_id, product_id):
-        i = OrderItem.query.get_or_404((order_id, product_id))
-        data = request.get_json()
-        for key, value in data.items():
-            setattr(i, key, value)
-        db.session.commit()
-        return jsonify({"message": "Order item updated"})
-
-
-    @app.delete("/order-items/<int:order_id>/<int:product_id>")
-    def delete_order_item(order_id, product_id):
-        i = OrderItem.query.get_or_404((order_id, product_id))
-        db.session.delete(i)
-        db.session.commit()
-        return "", 204
-
     @app.post("/orders-with-items")
     def create_order_with_items():
         user_id = session.get("user_id")
-
         if not user_id:
             return jsonify({"error": "Not authenticated"}), 401
 
@@ -396,7 +157,6 @@ def create_app():
         order_items = []
 
         try:
-            
             for item in items:
                 product_id = item["product_id"]
                 quantity = int(item["quantity"])
@@ -405,23 +165,13 @@ def create_app():
                     product_id=product_id
                 ).first()
 
-                if not user_product:
-                    return jsonify({"error": "Product not available"}), 404
-
-                if user_product.stock_quantity < quantity:
-                    return jsonify({
-                        "error": f"Not enough stock for product {product_id}"
-                    }), 400
+                if not user_product or user_product.stock_quantity < quantity:
+                    return jsonify({"error": "Insufficient stock"}), 400
 
                 price = float(user_product.price)
                 total_price += price * quantity
 
-                order_items.append({
-                    "product_id": product_id,
-                    "quantity": quantity,
-                    "price": price,
-                    "user_product": user_product
-                })
+                order_items.append((user_product, product_id, quantity, price))
 
             order = Order(
                 user_id=user_id,
@@ -430,30 +180,128 @@ def create_app():
             )
 
             db.session.add(order)
-            db.session.flush()  
+            db.session.flush()
 
-            for item in order_items:
+            for up, pid, qty, price in order_items:
                 db.session.add(OrderItem(
                     order_id=order.id,
-                    product_id=item["product_id"],
-                    quantity=item["quantity"],
-                    price_at_purchase=item["price"]
+                    product_id=pid,
+                    quantity=qty,
+                    price_at_purchase=price
                 ))
-
-                item["user_product"].stock_quantity -= item["quantity"]
+                up.stock_quantity -= qty
 
             db.session.commit()
-
-            return jsonify({
-                "order_id": order.id,
-                "total_price": total_price,
-                "status": order.status
-            }), 201
+            return jsonify({"order_id": order.id}), 201
 
         except Exception as e:
             db.session.rollback()
             return jsonify({"error": str(e)}), 500
 
 
+    @app.get("/farmer-orders")
+    def farmer_orders():
+        farmer_id = session.get("user_id")
+        if not farmer_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        orders = (
+            db.session.query(Order)
+            .join(OrderItem, OrderItem.order_id == Order.id)
+            .join(UserProduct, UserProduct.product_id == OrderItem.product_id)
+            .filter(UserProduct.user_id == farmer_id)
+            .distinct()
+            .all()
+        )
+
+        return jsonify([
+            {
+                "id": o.id,
+                "buyer_id": o.user_id,
+                "status": o.status,
+                "total_price": str(o.total_price)
+            } for o in orders
+        ])
+
+
+    @app.put("/farmer-orders/<int:order_id>/accept")
+    def accept_order(order_id):
+        farmer_id = session.get("user_id")
+        if not farmer_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        order = Order.query.get_or_404(order_id)
+
+        valid = (
+            db.session.query(OrderItem)
+            .join(UserProduct, UserProduct.product_id == OrderItem.product_id)
+            .filter(
+                OrderItem.order_id == order_id,
+                UserProduct.user_id == farmer_id
+            )
+            .first()
+        )
+
+        if not valid:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        order.status = "accepted"
+        db.session.commit()
+        return jsonify({"status": "accepted"})
+
+
+    @app.put("/farmer-orders/<int:order_id>/reject")
+    def reject_order(order_id):
+        farmer_id = session.get("user_id")
+        if not farmer_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        order = Order.query.get_or_404(order_id)
+
+        items = (
+            db.session.query(OrderItem)
+            .join(UserProduct, UserProduct.product_id == OrderItem.product_id)
+            .filter(
+                OrderItem.order_id == order_id,
+                UserProduct.user_id == farmer_id
+            )
+            .all()
+        )
+
+        if not items:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        for item in items:
+            up = UserProduct.query.filter_by(
+                user_id=farmer_id,
+                product_id=item.product_id
+            ).first()
+            if up:
+                up.stock_quantity += item.quantity
+
+        order.status = "rejected"
+        db.session.commit()
+        return jsonify({"status": "rejected"})
+
+
+    @app.put("/orders/<int:order_id>/pay")
+    def pay_for_order(order_id):
+        buyer_id = session.get("user_id")
+        if not buyer_id:
+            return jsonify({"error": "Not authenticated"}), 401
+
+        order = Order.query.get_or_404(order_id)
+
+        if order.user_id != buyer_id:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        if order.status != "accepted":
+            return jsonify({"error": "Order not payable"}), 400
+
+        order.status = "paid"
+        db.session.commit()
+        return jsonify({"status": "paid"})
+
     return app
+
 app = create_app()
