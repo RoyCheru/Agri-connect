@@ -3,15 +3,29 @@
 import { useEffect, useState } from "react"
 import { useStore } from "@/lib/store-context"
 import { apiFetch } from "@/lib/api"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ShoppingBag, Clock, Package, CheckCircle } from "lucide-react"
+
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+
+import { Button } from "@/components/ui/button"
+
+import {
+  ShoppingBag,
+  Clock,
+  CheckCircle,
+  XCircle,
+  CreditCard,
+} from "lucide-react"
 
 type Order = {
   id: number
   user_id: number
-  status: string
+  status: "pending" | "accepted" | "rejected" | "paid"
   total_price: string
-  created_at?: string
 }
 
 export function BuyerDashboard() {
@@ -20,38 +34,57 @@ export function BuyerDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!user) return
+  const fetchOrders = async () => {
+    try {
+      const res = await apiFetch("/orders")
+      if (!res.ok) throw new Error("Failed to fetch orders")
 
-const fetchOrders = async () => {
-  try {
-    const res = await apiFetch("/orders")
-    if (!res.ok) throw new Error("Failed to fetch orders")
+      const allOrders = await res.json()
+      const myOrders = allOrders.filter(
+        (o: Order) => o.user_id === user?.id
+      )
 
-    const allOrders = await res.json()
-    const myOrders = allOrders.filter(
-      (o: Order) => o.user_id === user.id
-    )
-
-    setOrders(myOrders)
-  } catch (err: any) {
-    setError(err.message)
-  } finally {
-    setLoading(false)
+      setOrders(myOrders)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
-}
 
-fetchOrders()
+  useEffect(() => {
+    if (user) fetchOrders()
   }, [user])
+
+  const handlePay = async (orderId: number) => {
+    try {
+      const res = await apiFetch(`/orders/${orderId}/pay`, {
+        method: "PUT",
+      })
+
+      if (!res.ok) throw new Error("Payment failed")
+
+      fetchOrders()
+    } catch (err) {
+      alert("Payment failed")
+    }
+  }
 
   if (loading) return <p>Loading your orders...</p>
   if (error) return <p className="text-red-500">{error}</p>
 
-  const pending = orders.filter(
-    (o) => o.status === "pending" || o.status === "confirmed"
-  ).length
-  const shipped = orders.filter((o) => o.status === "shipped").length
-  const delivered = orders.filter((o) => o.status === "delivered").length
+  const statusBadge = (status: Order["status"]) => {
+    switch (status) {
+      case "pending":
+        return <span className="text-yellow-600 flex gap-1"><Clock className="h-4 w-4" /> Pending</span>
+      case "accepted":
+        return <span className="text-green-600 flex gap-1"><CheckCircle className="h-4 w-4" /> Accepted</span>
+      case "paid":
+        return <span className="text-blue-600 flex gap-1"><CreditCard className="h-4 w-4" /> Paid</span>
+      case "rejected":
+        return <span className="text-red-600 flex gap-1"><XCircle className="h-4 w-4" /> Rejected</span>
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -62,46 +95,38 @@ fetchOrders()
         </p>
       </div>
 
-  <div className="grid gap-4 md:grid-cols-4">
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Total Orders</CardTitle>
-      </CardHeader>
-      <CardContent className="text-2xl font-bold">
-        {orders.length}
-      </CardContent>
-    </Card>
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5" />
+          My Orders
+        </h2>
 
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Pending</CardTitle>
-      </CardHeader>
-      <CardContent className="text-2xl font-bold">
-        {pending}
-      </CardContent>
-    </Card>
+        {orders.length === 0 ? (
+          <p>You have no orders yet.</p>
+        ) : (
+          orders.map(order => (
+            <Card key={order.id}>
+              <CardContent className="p-4 flex justify-between items-center">
+                <div>
+                  <p className="font-semibold">
+                    Order #{order.id}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Total: ${order.total_price}
+                  </p>
+                  {statusBadge(order.status)}
+                </div>
 
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Shipped</CardTitle>
-      </CardHeader>
-      <CardContent className="text-2xl font-bold">
-        {shipped}
-      </CardContent>
-    </Card>
-
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Delivered</CardTitle>
-      </CardHeader>
-      <CardContent className="text-2xl font-bold">
-        {delivered}
-      </CardContent>
-    </Card>
-  </div>
-
-  {orders.length === 0 && <p>You have no orders yet.</p>}
-</div>
+                {order.status === "accepted" && (
+                  <Button onClick={() => handlePay(order.id)}>
+                    Pay Now
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
   )
 }
-
